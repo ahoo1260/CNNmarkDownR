@@ -1,0 +1,114 @@
+---
+title: "CNN with keras"
+author: "Parva"
+date: "September 20, 2019"
+output: html_document
+---
+
+Keras is a high-level neural networks API, written in Python and capable of running on top of TensorFlow, CNTK, or Theano. It was developed with a focus on enabling fast experimentation. Being able to go from idea to result with the least possible delay is key to doing good research.
+
+Use Keras if you need a deep learning library that:
+
+Allows for easy and fast prototyping (through user friendliness, modularity, and extensibility).
+Supports both convolutional networks and recurrent networks, as well as combinations of the two.
+Runs seamlessly on CPU and GPU.
+
+To be able to user Keras, you need to install following items:
+
+[Latest version of Python (windows)](https://www.python.org/downloads/windows/)
+or
+[Latest version of Python (Mac)](https://www.python.org/downloads/mac-osx/)
+
+Plus
+
+Latest version of tensorflow : open your cmd and type "pip install tensorflow" [more help] (https://www.tensorflow.org/install/pip)
+
+Now, your computer is ready to install Keras.
+To use Keras, fist install the package and then use it with this code:
+
+```{r lib}
+install.packages(keras)
+library(keras)
+```
+
+Convolutional Neural Network (CNN) is a class of deep, feed-forward artificial neural networks ( where connections between nodes do not form a cycle) & use a variation of multilayer perceptrons designed to require minimal preprocessing. 
+
+To create a CNN model, some parameteres should be fixed. 
+
+```{r parameters}
+# Set parameters:
+max_features <- 5000
+maxlen <- 400
+batch_size <- 32
+embedding_dims <- 50
+filters <- 250
+kernel_size <- 3
+hidden_dims <- 250
+epochs <- 2
+```
+
+In this example, movie reviews from IMDB website are classfied. To load this dataset, the following code is used: The num_words argument indicates that only the max_features  (most frequent words) will be integerized. All other will be ignored.
+
+to load data by using "dataset_imdb" , you need to install numpy version 1.16.1 . So, first install numpy by copy and paste following code in your cmd: ( if you have numpy already installed on your computer, you need to unistall it first)
+
+pip install --upgrade numpy==1.16.1
+
+
+
+```{r loadingData}
+imdb <- dataset_imdb(num_words = max_features)
+
+```
+
+
+Now, data should be break into two parts, test and train. 
+When we load the dataset , X_train and X_test will contain the reviews, and y_train and y_test will contain the sentiment that those reviews represent ( 0 and 1 ).
+Also, we need to pad the sequences, so they have all the same length. 
+This will convert the dataset into a matrix: each line is a review and each column a word on the sequence. 
+(Pading the sequences with 0 to the left.)
+
+```{r data}
+x_train <- imdb$train$x %>%pad_sequences(maxlen = maxlen)
+x_test <- imdb$test$x %>%pad_sequences(maxlen = maxlen)
+```
+
+Defining Model ------------------------------------------------------
+
+We import a sequential model which is a pre-built keras model where you can just add the layers. 
+
+
+```{r model}
+model <- keras_model_sequential()
+```
+
+
+We build a sequential model and add convolutional layers and max pooling layers to it. We also add dropout layers in between, dropout randomly switches off some neurons in the network which forces the data to find new paths. Therefore, this reduces overfitting. We add dense layers at the end which are used for class prediction(0 or 1). 
+
+
+```{r layers}
+model %>% 
+layer_embedding(max_features, embedding_dims, input_length = maxlen) %>%
+layer_dropout(0.2) %>%
+layer_conv_1d(filters, kernel_size, padding = "valid", activation = "relu", strides = 1) %>%
+layer_global_max_pooling_1d() %>%
+layer_dense(hidden_dims) %>%
+layer_dropout(0.2) %>%
+layer_activation("relu") %>%
+    layer_dense(1) %>%
+  layer_activation("sigmoid")
+
+
+```
+
+We now compile the model with a binary cross entropy loss function, Adam optimizer and an accuracy metric. We then fit the dataset to the model, i.e we train the model for 2 epochs. After training the model, we evaluate the loss and accuracy of the model on the test data and print it.
+
+```{r compile}
+model %>% compile(loss = "binary_crossentropy",optimizer = "adam",metrics = "accuracy")
+model %>%
+  fit(
+    x_train, imdb$train$y,
+    batch_size = batch_size,
+    epochs = epochs,
+    validation_data = list(x_test, imdb$test$y)
+  )
+```
